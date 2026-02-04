@@ -1,0 +1,23 @@
+{
+  "slug": "SubGate8",
+  "name": "SubGate8",
+  "version": "2.0.0",
+  "license": "proprietary",
+  "brand": "Knoppies",
+  "author": "",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "SubGate8",
+      "name": "SubGate8",
+      "description": "8-step gate sequencer with 4 subdivisions per step, swing, and gate length control",
+      "tags": ["Sequencer", "Clock modulator"]
+    }
+  ]
+}
