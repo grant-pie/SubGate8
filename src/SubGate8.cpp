@@ -235,10 +235,125 @@ struct SubGate8 : Module {
 };
 
 
+struct SubGate8Panel : Widget {
+	SubGate8Panel(Vec size) {
+		box.size = size;
+	}
+
+	void draw(const DrawArgs& args) override {
+		float w = box.size.x;   // 270  (18HP)
+		float h = box.size.y;   // 380
+		float cx = w / 2.f;     // 135
+
+		// Layout anchors — keep in sync with SubGate8Widget
+		const float gridX     = 12.f;   // separator / section left edge
+		const float gridRight = 258.f;  // separator / section right edge
+		const float stepSpcX  = 25.f;   // step column spacing
+		const float startX    = cx - 3.5f * stepSpcX;  // centre 8 columns (47.5)
+
+		// === Background ===
+		nvgBeginPath(args.vg);
+		nvgRect(args.vg, 0, 0, w, h);
+		nvgFillColor(args.vg, nvgRGB(0x2a, 0x2a, 0x2a));
+		nvgFill(args.vg);
+
+		// === Inner panel face ===
+		nvgBeginPath(args.vg);
+		nvgRoundedRect(args.vg, 4.f, 4.f, w - 8.f, h - 8.f, 5.f);
+		nvgFillColor(args.vg, nvgRGB(0x22, 0x22, 0x22));
+		nvgFill(args.vg);
+		nvgStrokeColor(args.vg, nvgRGB(0x33, 0x33, 0x33));
+		nvgStrokeWidth(args.vg, 1.f);
+		nvgStroke(args.vg);
+
+		// === Separator lines ===
+		auto sep = [&](float y) {
+			nvgBeginPath(args.vg);
+			nvgMoveTo(args.vg, gridX, y);
+			nvgLineTo(args.vg, gridRight, y);
+			nvgStrokeColor(args.vg, nvgRGB(0x44, 0x44, 0x44));
+			nvgStrokeWidth(args.vg, 0.8f);
+			nvgStroke(args.vg);
+		};
+		sep(136.f);  // below grid, above controls
+		sep(202.f);  // above I/O section
+
+		// === Font ===
+		std::shared_ptr<Font> font = APP->window->loadFont(
+			asset::system("res/fonts/ShareTechMono-Regular.ttf"));
+		if (!font) return;
+		nvgFontFaceId(args.vg, font->handle);
+		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+		// === Title ===
+		nvgFontSize(args.vg, 11.f);
+		nvgFillColor(args.vg, nvgRGB(0xff, 0xff, 0xff));
+		nvgText(args.vg, cx, 22.f, "SubGate8", NULL);
+
+		// === Step number labels 1–8 ===
+		// Drawn inside the dark grid rect, above the button rows.
+		nvgFontSize(args.vg, 8.f);
+		nvgFillColor(args.vg, nvgRGB(0x88, 0x88, 0x88));
+		const char* stepNums[] = {"1","2","3","4","5","6","7","8"};
+		for (int i = 0; i < 8; i++) {
+			nvgText(args.vg, startX + i * stepSpcX, 35.f, stepNums[i], NULL);
+		}
+
+		// === Subdivision row labels 1–4 ===
+		// Right-aligned with extra gap left of the first button column,
+		// y matches each button row centre exactly.
+		const float startY = 62.f;
+		const float subSpcY = 20.f;
+		nvgFontSize(args.vg, 6.f);
+		nvgFillColor(args.vg, nvgRGB(0x66, 0x66, 0x66));
+		nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		for (int i = 0; i < 4; i++) {
+			char buf[2] = {(char)('1' + i), 0};
+			nvgText(args.vg, startX - 14.f, startY + i * subSpcY, buf, NULL);
+		}
+		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+		// === Control section labels ===
+		nvgFontSize(args.vg, 7.f);
+		nvgFillColor(args.vg, nvgRGB(0x88, 0x88, 0x88));
+		nvgText(args.vg, 45.f,  153.f, "GATE",   NULL);
+		nvgText(args.vg, 45.f,  162.f, "LENGTH", NULL);
+		nvgText(args.vg, 105.f, 155.f, "SWING",  NULL);
+		nvgText(args.vg, 225.f, 157.f, "RUN",    NULL);
+		nvgFontSize(args.vg, 8.f);
+		nvgText(args.vg, 165.f, 155.f, "STEPS",  NULL);
+
+		// === I/O section divider labels ===
+		nvgFontSize(args.vg, 6.f);
+		nvgFillColor(args.vg, nvgRGB(0x55, 0x55, 0x55));
+		nvgText(args.vg, 82.f,  212.f, "INPUTS",  NULL);
+		nvgText(args.vg, 208.f, 212.f, "OUTPUTS", NULL);
+
+		// === Input port labels ===
+		nvgFontSize(args.vg, 7.f);
+		nvgFillColor(args.vg, nvgRGB(0x88, 0x88, 0x88));
+		nvgText(args.vg, 42.f,  219.f, "CLK", NULL);
+		nvgText(args.vg, 82.f,  219.f, "RST", NULL);
+		nvgText(args.vg, 122.f, 219.f, "RUN", NULL);
+
+		// === Output port labels ===
+		nvgFillColor(args.vg, nvgRGB(0xcc, 0xcc, 0xcc));
+		nvgText(args.vg, 188.f, 219.f, "GATE", NULL);
+		nvgText(args.vg, 228.f, 219.f, "EOC",  NULL);
+
+		// === KNOPPIES — centred horizontally, between I/O bottom and panel bottom ===
+		nvgFontSize(args.vg, 7.f);
+		nvgFillColor(args.vg, nvgRGB(0x55, 0x55, 0x55));
+		nvgText(args.vg, cx, 312.f, "KNOPPIES", NULL);
+	}
+};
+
+
 struct SubGate8Widget : ModuleWidget {
 	SubGate8Widget(SubGate8* module) {
 		setModule(module);
-		setPanel(createPanel(asset::plugin(pluginInstance, "res/SubGate8.svg")));
+		box.size = Vec(RACK_GRID_WIDTH * 18, RACK_GRID_HEIGHT);  // 270 × 380
+		addChild(new SubGate8Panel(box.size));
 
 		// Screws
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
@@ -246,24 +361,25 @@ struct SubGate8Widget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		// Layout constants - matching SVG panel
-		float startX = 24.f;      // First step column center
-		float startY = 62.f;      // First subdivision row (moved down to avoid step light overlap)
-		float stepSpacingX = 25.f;
-		float subSpacingY = 20.f;
+		// Layout constants — keep in sync with SubGate8Panel draw()
+		const float cx        = box.size.x / 2.f;           // 135
+		const float stepSpcX  = 25.f;
+		const float startX    = cx - 3.5f * stepSpcX;       // centres 8 columns (47.5)
+		const float startY    = 62.f;   // First subdivision row
+		const float subSpcY   = 20.f;
 
 		// 8×4 grid of subdivision buttons with lights
 		for (int step = 0; step < 8; step++) {
-			float x = startX + step * stepSpacingX;
+			float x = startX + step * stepSpcX;
 
-			// Step indicator light at top (above grid)
+			// Step indicator light above the grid
 			addChild(createLightCentered<MediumLight<GreenLight>>(
 				Vec(x, 46.f),
 				module,
 				SubGate8::STEP_LIGHTS + step));
 
 			for (int sub = 0; sub < 4; sub++) {
-				float y = startY + sub * subSpacingY;
+				float y = startY + sub * subSpcY;
 				int idx = step * 4 + sub;
 
 				// Toggle button with integrated light
@@ -275,36 +391,31 @@ struct SubGate8Widget : ModuleWidget {
 			}
 		}
 
-		// Control section - below the grid
-		float controlY = 180.f;
+		// Control section
+		const float controlY = 180.f;
 
-		// Gate Length knob
 		addParam(createParamCentered<RoundSmallBlackKnob>(
 			Vec(45.f, controlY), module, SubGate8::GATE_LENGTH_PARAM));
 
-		// Swing knob
 		addParam(createParamCentered<RoundSmallBlackKnob>(
 			Vec(105.f, controlY), module, SubGate8::SWING_PARAM));
 
-		// Step count knob
 		addParam(createParamCentered<RoundSmallBlackKnob>(
 			Vec(165.f, controlY), module, SubGate8::STEP_COUNT_PARAM));
 
 		// Running indicator light
 		addChild(createLightCentered<SmallLight<GreenLight>>(
-			Vec(195.f, controlY), module, SubGate8::RUNNING_LIGHT));
+			Vec(225.f, controlY), module, SubGate8::RUNNING_LIGHT));
 
 		// Input/Output section
-		float ioY = 240.f;
+		const float ioY = 240.f;
 
-		// Inputs
-		addInput(createInputCentered<PJ301MPort>(Vec(30.f, ioY), module, SubGate8::CLOCK_INPUT));
-		addInput(createInputCentered<PJ301MPort>(Vec(65.f, ioY), module, SubGate8::RESET_INPUT));
-		addInput(createInputCentered<PJ301MPort>(Vec(100.f, ioY), module, SubGate8::RUN_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(42.f,  ioY), module, SubGate8::CLOCK_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(82.f,  ioY), module, SubGate8::RESET_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(122.f, ioY), module, SubGate8::RUN_INPUT));
 
-		// Outputs
-		addOutput(createOutputCentered<PJ301MPort>(Vec(150.f, ioY), module, SubGate8::GATE_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(185.f, ioY), module, SubGate8::EOC_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(188.f, ioY), module, SubGate8::GATE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(228.f, ioY), module, SubGate8::EOC_OUTPUT));
 	}
 };
 
