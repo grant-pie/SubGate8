@@ -341,10 +341,17 @@ struct SubGate8Panel : Widget {
 		nvgText(args.vg, 188.f, 219.f, "GATE", NULL);
 		nvgText(args.vg, 228.f, 219.f, "EOC",  NULL);
 
-		// === KNOPPIES — centred horizontally, between I/O bottom and panel bottom ===
+		// === VONK brand — "VON" near-white + "K" accent purple, combined word centred ===
 		nvgFontSize(args.vg, 7.f);
-		nvgFillColor(args.vg, nvgRGB(0x55, 0x55, 0x55));
-		nvgText(args.vg, cx, 312.f, "KNOPPIES", NULL);
+		nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		float vonAdv = nvgTextBounds(args.vg, 0, 0, "VON", NULL, NULL);
+		float kAdv   = nvgTextBounds(args.vg, 0, 0, "K",   NULL, NULL);
+		float vonkX  = cx - (vonAdv + kAdv) / 2.f;
+		nvgFillColor(args.vg, nvgRGB(0xf4, 0xf5, 0xf7));
+		nvgText(args.vg, vonkX,          312.f, "VON", NULL);
+		nvgFillColor(args.vg, nvgRGB(0xc0, 0x84, 0xfc));
+		nvgText(args.vg, vonkX + vonAdv, 312.f, "K",   NULL);
+		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 	}
 };
 
