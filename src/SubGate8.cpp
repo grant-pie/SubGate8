@@ -28,7 +28,7 @@ struct SubGate8 : Module {
 	};
 
 	// Sequencer state
-	int currentStep = 0;
+	int currentStep = -1;   // -1 so the first clock advances to step 0
 	int currentSubdivision = 0;
 	float subdivisionPhase = 0.f;
 	bool running = true;
@@ -38,8 +38,8 @@ struct SubGate8 : Module {
 	dsp::SchmittTrigger resetTrigger;
 	dsp::SchmittTrigger runTrigger;
 
-	// Gate/trigger generators
-	dsp::PulseGenerator gatePulse;
+	// Gate/trigger generators — one per subdivision so swing can't merge pulses
+	dsp::PulseGenerator subPulse[4];
 	dsp::PulseGenerator eocPulse;
 
 	// Timing
@@ -77,7 +77,7 @@ struct SubGate8 : Module {
 	}
 
 	void onReset() override {
-		currentStep = 0;
+		currentStep = -1;
 		currentSubdivision = 0;
 		subdivisionPhase = 0.f;
 		running = true;
@@ -103,11 +103,11 @@ struct SubGate8 : Module {
 		timeSinceLastClock += args.sampleTime;
 
 		// Handle Clock
+		bool clockedThisSample = false;
 		if (clockTrigger.process(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 1.f)) {
 			if (running) {
 				// Estimate clock period from previous clock
 				if (firstClockReceived && timeSinceLastClock > 0.001f) {
-					// Smooth the clock period estimate
 					clockPeriod = clockPeriod * 0.7f + timeSinceLastClock * 0.3f;
 				}
 				firstClockReceived = true;
@@ -118,7 +118,6 @@ struct SubGate8 : Module {
 				int stepCount = (int)params[STEP_COUNT_PARAM].getValue();
 				if (currentStep >= stepCount) {
 					currentStep = 0;
-					// Trigger end-of-cycle
 					eocPulse.trigger(1e-3f);
 				}
 
@@ -127,18 +126,23 @@ struct SubGate8 : Module {
 				subdivisionPhase = 0.f;
 				swingAccumulator = 0.f;
 
-				// Fire gate for first subdivision if enabled
+				// Fire sub 0 of the new step immediately
 				triggerSubdivisionIfEnabled(0);
+				clockedThisSample = true;
 			}
 		}
 
-		// Process subdivisions within the step
-		if (running && firstClockReceived && clockPeriod > 0.f) {
+		// Process subdivisions 1-3 — skip the sample the clock fired on so
+		// subdivision timing isn't collapsed to near-zero
+		if (running && firstClockReceived && clockPeriod > 0.f && !clockedThisSample) {
 			processSubdivisions(args);
 		}
 
-		// Process gate output
-		float gateVoltage = gatePulse.process(args.sampleTime) ? 10.f : 0.f;
+		// OR together all four subdivision pulse generators
+		float gateVoltage = 0.f;
+		for (int i = 0; i < 4; i++) {
+			if (subPulse[i].process(args.sampleTime)) gateVoltage = 10.f;
+		}
 		outputs[GATE_OUTPUT].setVoltage(gateVoltage);
 
 		// Process EOC output
@@ -193,23 +197,22 @@ struct SubGate8 : Module {
 			// Clamp to reasonable range
 			gateDuration = clamp(gateDuration, 0.001f, clockPeriod);
 
-			gatePulse.trigger(gateDuration);
+			subPulse[sub].trigger(gateDuration);
 		}
 	}
 
 	void updateLights(const ProcessArgs& args) {
-		// Step indicator lights
+		// Step indicator lights — currentStep is -1 before first clock
 		for (int i = 0; i < 8; i++) {
-			lights[STEP_LIGHTS + i].setBrightness(i == currentStep ? 1.f : 0.f);
+			lights[STEP_LIGHTS + i].setBrightness((currentStep >= 0 && i == currentStep) ? 1.f : 0.f);
 		}
 
 		// Subdivision toggle lights
 		for (int i = 0; i < 32; i++) {
 			float brightness = params[SUB_TOGGLE_PARAMS + i].getValue();
-			// Make current step's active subdivisions brighter
 			int step = i / 4;
 			int sub = i % 4;
-			if (step == currentStep && sub == currentSubdivision && brightness > 0.5f) {
+			if (currentStep >= 0 && step == currentStep && sub == currentSubdivision && brightness > 0.5f) {
 				brightness = 1.f;
 			} else if (brightness > 0.5f) {
 				brightness = 0.6f;
